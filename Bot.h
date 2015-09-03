@@ -28,6 +28,11 @@ public:
 	{
 		EMPIRE, RAID
 	};
+	struct AiWeights 
+	{
+		int lastSuperWeight;
+		int firstSuperWeight;
+	};
 	Bot();
 	virtual ~Bot();
 
@@ -75,7 +80,6 @@ public:
 	void startDelay(const int& delay);
 
 	void setPhase(const Phase phase);
-
 	/**
 	 * Evaluates the current phase and in turn figures out the proper action for the current move
 	 * Hook in your army placements and attack moves here
@@ -92,6 +96,11 @@ public:
 	void resetRegionsOwned();
 	bool canThisWin(int attackers, int defenders);
 	int whatCanWin(int defenders);
+	void calculateThreatLevels();
+	int calculateOwnedSupers();
+	int countOwnedRegionsOfSuper(int superRegionIndex);
+
+	void loadGeneticValues();
 private:
 	std::ifstream in;
 	std::fstream debug;
@@ -112,6 +121,9 @@ private:
 	Phase phase;
 	int round;
 	AiState state;
+	int aiStateCutoff;
+	AiWeights Empire;
+	AiWeights Raid;
 };
 
 #endif // BOT_H
