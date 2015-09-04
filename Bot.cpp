@@ -14,7 +14,7 @@
 Bot::Bot() :
 		armiesLeft(0), timebank(0), timePerMove(0), maxRounds(0), parser(this), phase(NONE), state(EMPIRE)
 {
-	debug.open("debuga.txt", std::fstream::out);
+	debug.open("debug_v2.txt", std::fstream::out);
 	debug << "debugstarted" << std::endl;
 	loadGeneticValues();
 }
@@ -323,8 +323,8 @@ void Bot::makeMoves()
 	{
 		Region thisOwnedRegion = regions[owned[ownedIndex]];
 		//if this territory only has 1-4 army, skip it
-		if (thisOwnedRegion.getArmies() <= 3)
-			continue;
+		//if (thisOwnedRegion.getArmies() <= 3)
+		//	continue;
 		debug << ".Looking at region " << owned[ownedIndex] 
 			  << ": str= " << thisOwnedRegion.getArmies() 
 			  << std::endl;
@@ -425,6 +425,7 @@ void Bot::makeMoves()
 
 		unsigned attackingArmy  = thisOwnedRegion.getArmies() - 1;
 		int count = 0;
+		std::vector<std::pair<unsigned,unsigned>> moveList;
 		while( attackingArmy > 0 && count < weightedPossibleMoves.size() -1)
 		{
 			debug << ".have " << attackingArmy << " troops left, looking to move them" << std::endl;
@@ -444,22 +445,19 @@ void Bot::makeMoves()
 				unsigned defenseStr = regions[target].getArmies();
 		
 				unsigned strengthNeeded = whatCanWin(defenseStr);
-				//unsigned possibleStrengthNeeded = whatCanWin(defenseStr * 3 / 2) + 1;
-
-				//if( possibleStrengthNeeded <= attackingArmy ) strengthNeeded = possibleStrengthNeeded;
 
 				//if you only have 1 bad neighbor, attack with everything
-				if( numberOfBadNeighbors == 1 ) strengthNeeded = attackingArmy;
+				//if you have no bad neighbors, move everything (instead of just enough to "take" that region
+				if( numberOfBadNeighbors <= 1 ) strengthNeeded = attackingArmy;
 				if( strengthNeeded <= attackingArmy ) //only move if you can kill them
 				{
-					std::stringstream move;
+					std::pair<unsigned,unsigned> move;
+					move.first = target;
+					move.second = std::min( strengthNeeded, attackingArmy);
+					moveList.push_back(move);
 					debug << ".stengthNeeded: " << strengthNeeded << ",attackers: " << attackingArmy << std::endl;
 					debug << ".moving " << std::min( strengthNeeded,attackingArmy ) << " to " << target << std::endl;
-					move <<" "<< botName << " attack/transfer " << owned[ownedIndex] << " "
-							<< target << " "
-							<< std::min( strengthNeeded, attackingArmy);
-					moves.push_back(move.str());
-					debug << move.str() << std::endl;
+					debug << move.first << "," << move.second << std::endl;
 
 					debug << ".taking: " << std::min( strengthNeeded, attackingArmy) << " off of attackingArmy" << std::endl;
 					attackingArmy -= std::min( strengthNeeded, attackingArmy);
@@ -471,6 +469,38 @@ void Bot::makeMoves()
 				debug << ".target either doesn't have enough weight to move there, or it's saving for a final region in super region"<<std::endl;
 				break;
 			}
+		}
+		std::vector<std::pair<unsigned,unsigned>>::iterator mL_it;
+		int attackedEnemies = 0;
+		if( attackingArmy > 0 )
+		{
+			//count up number of enemy regions (so that I can divide extra armies evenly)
+			for( mL_it = moveList.begin(); mL_it < moveList.end(); mL_it++ )
+			{
+				if( regions[mL_it->first].getOwner() == ENEMY )
+					++attackedEnemies;
+			}
+		}
+		//push all of the moves to output (with some edits if needed)
+		for( mL_it = moveList.begin(); mL_it < moveList.end(); mL_it++ )
+		{
+			//if there is still more army to attack with, attack enemy regions with more (in case they reinforce them)
+			if( attackingArmy > 0 && regions[mL_it->first].getOwner() == ENEMY )
+			{
+				mL_it->second += (attackingArmy / attackedEnemies);
+				attackingArmy -= (attackingArmy / attackedEnemies);
+				if( attackingArmy == 1 )
+				{
+					mL_it->second += 1;
+					attackingArmy = 0;
+				}
+					
+			}
+			std::stringstream move;
+			move <<" "<< botName << " attack/transfer " << owned[ownedIndex] << " "
+					<< mL_it->first << " "
+					<< mL_it->second;
+			moves.push_back(move.str());
 		}
 		debug << ".# of moves saved: " << moves.size() << std::endl;
 	}
