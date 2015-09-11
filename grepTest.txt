@@ -1,0 +1,16 @@
+Running 1 tests per map ( 12 ) as both player 1 and player 2: 24 total runs
+a: 12 50%, b: 11 45%, tie: 1 4%, total: 24   
+p1 wins: 7 
+p2 wins: 5 
+largemapWins: 1 (1+0)
+separatedWins: 1 (0+1)
+smallmapWins: 0 (0+0)
+fullymapWins: 2 (1+1)
+moremap1Wins: 0 (0+0)
+moremap2Wins: 1 (1+0)
+moremap3Wins: 2 (1+1)
+moremap4Wins: 1 (0+1)
+moremap5Wins: 1 (1+0)
+moremap6Wins: 1 (0+1)
+moremap7Wins: 1 (1+0)
+
