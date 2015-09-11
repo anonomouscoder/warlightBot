@@ -19,6 +19,7 @@ public:
 	inline size_t size() const { return regions.size(); }
 	inline std::vector<int> const getRegions() { return regions; }
 	bool hasIn(int value);
+	bool hasWasteland;
 private:
 	std::vector<int> regions;
 	int reward;

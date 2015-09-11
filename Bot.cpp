@@ -14,7 +14,7 @@
 Bot::Bot() :
 		armiesLeft(0), timebank(0), timePerMove(0), maxRounds(0), parser(this), phase(NONE), state(EMPIRE)
 {
-	debug.open("debug_v2.txt", std::fstream::out);
+	debug.open("debug_a.txt", std::fstream::out);
 	debug << "debugstarted" << std::endl;
 	loadGeneticValues();
 }
@@ -79,10 +79,16 @@ void Bot::pickStartingRegion()
 		{
 			Region thisStartRegion = regions[startingRegionsreceived[startRegionIndex]];
 			SuperRegion thisStartSuperRegion = superRegions[thisStartRegion.getSuperRegion()];
-
-			unsigned weight = 1000;
-			weight -= weightedSuperRegionIndexList[thisStartRegion.getSuperRegion()].second;
-		
+			debug << "SuperRegion "<<thisStartRegion.getSuperRegion()<<" = (s:" << thisStartSuperRegion.size() << ", r:" << thisStartSuperRegion.getReward() << ")" << std::endl;
+			unsigned weight = 1000 - thisStartSuperRegion.getReward();
+			if( thisStartSuperRegion.hasWasteland )
+			{
+				weight -= ( 50  / thisStartSuperRegion.size() );
+			}
+			else
+			{	
+				weight -= ( 100 / thisStartSuperRegion.size() );
+			}
 			debug << "Region "<< startingRegionsreceived[startRegionIndex] <<", weight = " << weight << std::endl;	
 			weights.push_back(std::pair<unsigned,unsigned>(startRegionIndex,weight) );
 		}
@@ -357,8 +363,6 @@ void Bot::makeMoves()
 					{
 						weight += sameSuperWeight;
 						debug << ", in same superregion. weight + " << sameSuperWeight;	
-						weight += weightedSuperRegionIndexList[thisNeighborRegion.getSuperRegion()].first;
-						debug << " + " +weightedSuperRegionIndexList[thisNeighborRegion.getSuperRegion()].second;
 
 						//count how many regions of this superregion that I don't have
 						int countOfOwnedRegionsInSuper = countOwnedRegionsOfSuper(thisNeighborRegion.getSuperRegion());
@@ -645,14 +649,16 @@ void Bot::addWasteland(const unsigned &noRegion)
 {
 	wastelands.push_back(noRegion);
 	unsigned noSuperRegion = regions[noRegion].getSuperRegion();
-	weightedSuperRegionIndexList[noSuperRegion].second = superRegions[noSuperRegion].getReward() * 50 / (unsigned)superRegions[noSuperRegion].size();
+	superRegions[noSuperRegion].hasWasteland=true;
+	weightedSuperRegionIndexList[noSuperRegion].second = 0;//superRegions[noSuperRegion].getReward() * 25 / (unsigned)( superRegions[noSuperRegion].size()*superRegions[noSuperRegion].size() );
 }
 void Bot::addSuperRegion(const unsigned& noSuperRegion, const int&reward)
 {
 	while (superRegions.size() <= noSuperRegion)
 	{
 		superRegions.push_back(SuperRegion());
-		weightedSuperRegionIndexList.push_back(std::pair<unsigned,unsigned>(noSuperRegion,0));
+		//unsigned weight = superRegions[noSuperRegion].getReward() * 100 / (unsigned)( superRegions[noSuperRegion].size()*superRegions[noSuperRegion].size() ) ;
+		weightedSuperRegionIndexList.push_back(std::pair<unsigned,unsigned>(noSuperRegion,1));
 	}
 	superRegions[noSuperRegion] = SuperRegion(reward);
 }
@@ -695,6 +701,7 @@ void Bot::addStartingRegion(const unsigned& noRegion)
 void Bot::addOpponentStartingRegion(const unsigned& noRegion)
 {
 	opponentStartingRegions.push_back(noRegion);
+	regions[noRegion].setOwner(ENEMY);
 }
 void Bot::opponentPlacement(const unsigned & noRegion, const int & nbArmies)
 {
@@ -722,6 +729,7 @@ void Bot::startDelay(const int& delay)
 }
 void Bot::setPhase(const Bot::Phase pPhase)
 {
+	debug << "Changing phase: " << pPhase << std::endl;
 	phase = pPhase;
 }
 void Bot::executeAction()
